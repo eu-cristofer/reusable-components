@@ -9,9 +9,13 @@
  * 
  *     gcc SQLite_C_version.c -lsqlite3
  * 
+ *     or
  * 
+ *     gcc SQLite_C_version.c sqlite-amalgamation/sqlite3.c
+ *         -lpthread -ldl -lm -o version
+ *  * 
  * @author Cristofer Costa <cristofercosta@yahoo.com.br>
- * @link https://confired.com
+ * @link https://github.com/eu-cristofer/reusable-components
  */
 
 #include <sqlite3.h>
