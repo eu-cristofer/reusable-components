@@ -1,11 +1,18 @@
 # Reusable Components
 Reusable pieces of code
 
-# SQLite_C_logger.c
+# Contents
+- [SQLite_C_logger.c](#sqlite_c_logger)
+
+- [SQLite_Py_C_logger.py](#sqlite_py_c_logger)
+
+## SQLite_C_logger
+
+Source file: ```SQLite_C_logger.c```.
 
 Code sample of howto use SQLite to log activities in a software module. 
 
-## Compilation instructions:
+### Compilation instructions:
 
 To create a shared library from C code, you need to compile the code with the -fPIC and -shared flags, i.e.:
 
@@ -26,6 +33,8 @@ The -lm flag in GCC tells the compiler to link the mathematical library (libm) t
 
 The -o flag in GCC specifies the name of the output file.
 
-# SQLite_Py_C_logger.py
+## SQLite_Py_C_logger
+
+Source file:```SQLite_Py_C_logger.py```.
 
 Sample of how to use the SQLite_C_logger.c from a Python code using the sqlite3 module
