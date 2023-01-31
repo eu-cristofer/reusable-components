@@ -46,7 +46,11 @@
 import ctypes
 import os
 
-
+'''
+    Add a path to the DLL search path.
+    This search path is used when resolving dependencies for imported extension
+    modules, and also by ctypes.
+'''
 working_dir = os.getcwd()
 os.add_dll_directory(working_dir)
 
