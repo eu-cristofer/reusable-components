@@ -1,0 +1,10 @@
+'''
+
+Function to list the features
+Estes comandos devem ser digitados no Python Console
+
+'''
+
+import pandas as pd
+
+print(dir(pd.DataFrame))
