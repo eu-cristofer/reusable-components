@@ -7,5 +7,4 @@ Tool_reducePriority.bas
 Tool_createStyles.bas
 Tool_addTOC.bas
 Tool_createUserForm.bas
-selectTOCLevel.frm
 

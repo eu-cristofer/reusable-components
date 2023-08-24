@@ -1,8 +1,8 @@
-Attribute VB_Name = "Tool_addTOC"
+Attribute VB_Name = "addTOC"
 Option Explicit
-Sub addTOC()
+Sub a1_addTOC()
     '------------------------------------------------------------------------------
-    ' addTOC
+    ' a1_addTOC
     '
     ' Description:
     '   Add the Table of Contents in the document where the cursos is placed.
@@ -24,7 +24,7 @@ Sub addTOC()
     '   4  will generate a TOC with the above mentioned stylesand 1 willkeep only the
     '   following styles:
     '           - Title_unnumbered; and
-    '           - Title_1.
+    '           - Title_1.  
     '
     ' Source:
     '   https://github.com/eu-cristofer/reusable-components
