@@ -47,7 +47,7 @@ Function createFontSizeName( _
         .Visibility = False
         .Priority = 1
         .LanguageID = LANG_ID_ENGLISH
-        .AutomaticallyUpdate = True
+        .AutomaticallyUpdate = False
         
         ' Configure font settings
         With .font
