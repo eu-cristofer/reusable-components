@@ -89,6 +89,8 @@ End Sub
 
 Private Function GetSlideSumario() As Integer
 'Esta funçăo tem como objetivo encontrar o Slide intitulado "Sumário"
+'Existe um possível erro nessa macro quando importada diretamente do GITHUB
+'Verifique se a acentuação está correta considerando o mapa de caracteres do Windows
     
     Debug.Print "******************************************"
     Debug.Print "Processamento da funçăo GetSlideSumário():"
