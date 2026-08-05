@@ -1,6 +1,25 @@
+# --- OS / system files ---
 .DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
 
-# Prerequisites
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# --- Prerequisites ---
 *.d
 
 # Object files
@@ -53,4 +72,48 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# --- IDEs / editors ---
 .vscode/
+.idea/
+*.iml
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Packaging / installers
+pip-wheel-metadata/
+
+# Test / coverage / tooling
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# --- End ---

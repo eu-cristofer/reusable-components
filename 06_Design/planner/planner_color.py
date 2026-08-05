@@ -1,18 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 Planner 2026/2027 — VARIANTE COLORIDA (versão de teste para impressão).
-
-Recriação funcional (não oficial) inspirada na estrutura do MyPlan.
-Inclui: Roda da Vida (12 áreas / 4 quadrantes), Metas e Projetos Futuros
-(4 quadrantes) e Controle Financeiro (Entradas / Parc.-Recorrentes / Saídas
-+ saldo). Anos 2026 e 2027 com feriados nacionais destacados.
-
 >>> NOVO: suporte fácil para FERIADOS DO RIO (municipais/estaduais) e
     RECESSOS/FÉRIAS ESCOLARES — edite as listas REGIONAL e SCHOOL abaixo.
 
 Requisitos: reportlab   ->   pip install reportlab
 Uso:
-    python planner_color.py                       # A4 e A5, com Rio e escolar
+    python planner_color.py                       # A4 e A5, com
+     Rio e escolar
     python planner_color.py --size A4
     python planner_color.py --no-rio              # sem feriados do Rio
     python planner_color.py --no-escolar          # sem recessos escolares
@@ -45,16 +40,40 @@ SCHOOL_BG = colors.HexColor("#ffe9a8")  # fundo dos dias de recesso escolar
 
 PT_MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-PT_WD = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-PT_WD_FULL = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 
-calendar.setfirstweekday(calendar.MONDAY)
+# ================= Weekday config / i18n =================
+# Controla o primeiro dia da semana em TODOS os calendários/grades.
+# Troque para calendar.MONDAY se quiser semana começando na segunda.
+FIRST_WEEKDAY = calendar.SUNDAY
+
+# Abreviações e nomes fixos pelo padrão do Python:
+# calendar.weekday() => Monday=0 ... Sunday=6
+WD_ABBR_MON0 = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
+WD_FULL_MON0 = {
+    0: "Segunda", 1: "Terça", 2: "Quarta", 3: "Quinta",
+    4: "Sexta", 5: "Sábado", 6: "Domingo",
+}
+
+def wd_full_pt(year, month, day):
+    """Nome do dia da semana em PT-BR para uma data (Mon=0..Sun=6)."""
+    return WD_FULL_MON0[calendar.weekday(year, month, day)]
+
+
+def weekday_headers(first_weekday=FIRST_WEEKDAY):
+    """Lista de 7 abreviações ordenada pelo primeiro dia da semana configurado."""
+    # calendar.SUNDAY == 6 e calendar.MONDAY == 0
+    order = [(first_weekday + i) % 7 for i in range(7)]
+    return [WD_ABBR_MON0[d] for d in order]
+
+
+calendar.setfirstweekday(FIRST_WEEKDAY)
 
 # ================= FERIADOS NACIONAIS (N) / FACULTATIVOS (F) =================
 HOLIDAYS = {
     2026: [
         (1, 1, "Confraternização Universal", "N"),
-        (2, 16, "Carnaval", "F"), (2, 17, "Carnaval", "F"),
+        (2, 16, "Carnaval", "F"),
+        (2, 17, "Carnaval", "N"),
         (2, 18, "Quarta-feira de Cinzas", "F"),
         (4, 3, "Sexta-feira Santa", "N"),
         (4, 21, "Tiradentes", "N"),
@@ -69,7 +88,8 @@ HOLIDAYS = {
     ],
     2027: [
         (1, 1, "Confraternização Universal", "N"),
-        (2, 8, "Carnaval", "F"), (2, 9, "Carnaval", "F"),
+        (2, 8, "Carnaval", "F"),
+        (2, 9, "Carnaval", "N"),
         (2, 10, "Quarta-feira de Cinzas", "F"),
         (3, 26, "Sexta-feira Santa", "N"),
         (4, 21, "Tiradentes", "N"),
@@ -274,8 +294,11 @@ def build(page_size, out_name, include_rio=True, include_school=True):
              font="Helvetica-Bold", color=ACC, align="c")
         top = y + h - 8.5 * mm * s
         cw = w / 7.0
-        for i, d in enumerate(PT_WD):
-            col = ACC2 if i == 6 else GREY
+
+        headers = weekday_headers(FIRST_WEEKDAY)
+        sunday_col = (calendar.SUNDAY - FIRST_WEEKDAY) % 7
+        for i, d in enumerate(headers):
+            col = ACC2 if i == sunday_col else GREY
             text(x + cw * i + cw / 2, top, d[0], size=fs(5.6), color=col, align="c")
         weeks = calendar.monthcalendar(year, month)
         rh = (top - 3 * mm * s - y) / len(weeks)
@@ -301,7 +324,7 @@ def build(page_size, out_name, include_rio=True, include_school=True):
                     c.setStrokeColor(FAC); c.setLineWidth(0.9)
                     c.circle(cxp, cyp + 0.9 * mm * s, rad, stroke=1, fill=0)
                     col = colors.HexColor("#9a6b00")
-                elif i == 6:
+                elif i == sunday_col:
                     col = ACC2
                 text(cxp, cyp, str(day), size=fs(6), color=col,
                      font="Helvetica-Bold" if t else "Helvetica", align="c")
@@ -377,7 +400,7 @@ def build(page_size, out_name, include_rio=True, include_school=True):
         text(xL, yy, str(yr), size=fs(9), font="Helvetica-Bold", color=ACC)
         yy -= 5.5 * mm * s
         for (m, d, name, t) in sorted(HOLIDAYS[yr], key=lambda it: (it[0], it[1])):
-            wd = PT_WD_FULL[calendar.weekday(yr, m, d)]
+            wd = wd_full_pt(yr, m, d)
             if t == "N":
                 c.setFillColor(ACC2); c.circle(xL + 2 * mm * s, yy + 1 * mm * s, 1.4 * mm * s, stroke=0, fill=1)
             else:
@@ -537,23 +560,39 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     # ========================================================
     # 8. VISÃO MENSAL
     # ========================================================
+    # Esta página é um TEMPLATE: imprime uma grade mensal vazia (preencher à mão).
+    # A grade precisa respeitar FIRST_WEEKDAY (domingo/segunda).
     y = page_header("Visão mensal", "Mês: __________________________", color=Q_PR)
+
     cal_w = W - 2 * M
     cal_h = (y - M) * 0.66
     box(M, y - cal_h, cal_w, cal_h, stroke=LIGHT)
+
     cw = cal_w / 7.0
     hh = 8 * mm * s
-    for i, d in enumerate(PT_WD):
-        c.setFillColor(Q_PR if i < 5 else colors.HexColor("#eaf3ee"))
+
+    headers = weekday_headers(FIRST_WEEKDAY)
+    sun_col = (calendar.SUNDAY - FIRST_WEEKDAY) % 7
+    sat_col = (calendar.SATURDAY - FIRST_WEEKDAY) % 7
+
+    for i, d in enumerate(headers):
+        is_weekend = i in (sat_col, sun_col)
+        c.setFillColor(colors.HexColor("#eaf3ee") if is_weekend else Q_PR)
         c.rect(M + i * cw, y - hh, cw, hh, stroke=0, fill=1)
         text(M + i * cw + cw / 2, y - hh + 2.5 * mm * s, d, size=fs(8),
-             font="Helvetica-Bold", color=WHITE if i < 5 else Q_PR, align="c")
+             font="Helvetica-Bold", color=Q_PR if is_weekend else WHITE, align="c")
+
+    # Corpo: 6 linhas (semanas) x 7 colunas
     rh = (cal_h - hh) / 6
     c.setStrokeColor(FAINT); c.setLineWidth(0.6)
+
+    # linhas horizontais (entre as 6 semanas)
     for r in range(1, 6):
         c.line(M, y - hh - r * rh, M + cal_w, y - hh - r * rh)
+
+    # linhas verticais (entre os 7 dias) — desenhar de cima (abaixo do header) até o fundo
     for i in range(1, 7):
-        c.line(M + i * cw, y - cal_h, M + i * cw, y - hh)
+        c.line(M + i * cw, y - hh, M + i * cw, y - cal_h)
     by = y - cal_h - 6 * mm * s
     bh2 = by - (M + 2 * mm * s)
     half = (cal_w - 6 * mm * s) / 2
@@ -606,7 +645,8 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     gx = rx + 5 * mm * s; gy = y - 13 * mm * s
     labcol = 30 * mm * s
     dcw = (colw - 10 * mm * s - labcol) / 7
-    for i, d in enumerate(PT_WD):
+    headers = weekday_headers(FIRST_WEEKDAY)
+    for i, d in enumerate(headers):
         text(gx + labcol + dcw * i + dcw / 2, gy, d[0], size=fs(6.5), color=GREY, align="c")
     nh = 8
     hg = (hab_h - 18 * mm * s) / nh
@@ -635,7 +675,8 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     dayw = (W - 2 * M - tcol) / 7
     hh = 8 * mm * s
     c.setFillColor(Q_RE); c.rect(M, y - hh, W - 2 * M, hh, stroke=0, fill=1)
-    for i, d in enumerate(PT_WD):
+    headers = weekday_headers(FIRST_WEEKDAY)
+    for i, d in enumerate(headers):
         text(M + tcol + dayw * i + dayw / 2, y - hh + 2.5 * mm * s, d, size=fs(8),
              font="Helvetica-Bold", color=WHITE, align="c")
     hours = list(range(6, 23))
