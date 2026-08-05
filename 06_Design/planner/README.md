@@ -1,10 +1,5 @@
 # Planner 2026/2027 — VARIANTE COLORIDA (Versão de Teste)
 
-Recriação **funcional e não oficial** inspirada na estrutura do *Planner da MyPlan* (usemyplan.com.br), com **capa leve**. Para **imprimir e avaliar o fluxo** antes de
-comprar a versão física.
-
-> ⚠️ Uso **pessoal de avaliação**. Não é produto oficial da MyPlan.
-
 ---
 
 ## 📦 Conteúdo
