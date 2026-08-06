@@ -21,6 +21,10 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+# Ligue/desligue por padrão aqui (ou use --no-rio / --no-escolar):
+INCLUDE_RIO = True
+INCLUDE_SCHOOL = True
+
 # ---------------- paleta inspirada em Kandinsky ----------------
 INK = colors.HexColor("#111111")
 BLACK = colors.HexColor("#000000")
@@ -304,6 +308,23 @@ def build(page_size, out_name, include_rio=True, include_school=True):
              size=fs(7), color=GREY)
         text(W - M, M - 7 * mm * s, f"{pg}", size=fs(8), color=GREY, align="r")
 
+    def booklet_page_header(title, subtitle=None, color=ACC, side="right"):
+        inner = 18 * mm * s
+        outer = 13 * mm * s
+        left_page = (side == "left")
+        m_left = outer if left_page else inner
+        m_right = inner if left_page else outer
+        c.setFillColor(color); c.rect(0, H - 4 * mm * s, W, 4 * mm * s, stroke=0, fill=1)
+        text(m_left, H - M + 3 * mm * s, "PLANNER 2026/2027", size=fs(7.5),
+             font="Helvetica-Bold", color=GREY)
+        text(W - m_right, H - M + 3 * mm * s, "variante colorida", size=fs(7.5),
+             color=GREY, align="r")
+        if title:
+            text(m_left, H - M - 6 * mm * s, title, size=fs(15), font="Helvetica-Bold", color=color)
+        if subtitle:
+            text(m_left, H - M - 12 * mm * s, subtitle, size=fs(9), color=GREY)
+        return H - M - 20 * mm * s, m_left, m_right
+
     def mini_month(x, y, w, h, year, month, hol, school_days, sme_types=None):
         sme_types = sme_types or {}
         text(x + w / 2, y + h - 4 * mm * s, PT_MONTHS[month - 1], size=fs(8.5),
@@ -574,146 +595,184 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     c.showPage()
 
     # ========================================================
-    # 8. VISÃO MENSAL
+    # 8 e 9. VISÃO MENSAL EM PÁGINA DUPLA
     # ========================================================
-    # Esta página é um TEMPLATE: imprime uma grade mensal vazia (preencher à mão).
-    # A grade precisa respeitar FIRST_WEEKDAY (domingo/segunda).
-    y = page_header("Visão mensal", "Mês: __________________________", color=Q_PR)
+    def monthly_spread_page(pg, side, day_idxs):
+        y, m_left, m_right = booklet_page_header(
+            "Visão mensal",
+            "Mês: __________________________",
+            color=Q_PR,
+            side=side,
+        )
 
-    cal_w = W - 2 * M
-    cal_h = (y - M) * 0.66
-    box(M, y - cal_h, cal_w, cal_h, stroke=LIGHT)
+        x0 = m_left
+        usable_w = W - m_left - m_right
+        bottom = M + 2 * mm * s
+        cal_h = (y - bottom) * 0.67
+        hh = 8 * mm * s
+        cal_w = usable_w
 
-    cw = cal_w / 7.0
-    hh = 8 * mm * s
+        box(x0, y - cal_h, cal_w, cal_h, stroke=LIGHT)
 
-    headers = weekday_headers(FIRST_WEEKDAY)
-    sun_col = (calendar.SUNDAY - FIRST_WEEKDAY) % 7
-    sat_col = (calendar.SATURDAY - FIRST_WEEKDAY) % 7
+        cw = cal_w / len(day_idxs)
+        headers = weekday_headers(FIRST_WEEKDAY)
+        sun_col = (calendar.SUNDAY - FIRST_WEEKDAY) % 7
+        sat_col = (calendar.SATURDAY - FIRST_WEEKDAY) % 7
 
-    for i, d in enumerate(headers):
-        is_weekend = i in (sat_col, sun_col)
-        c.setFillColor(colors.HexColor("#eaf3ee") if is_weekend else Q_PR)
-        c.rect(M + i * cw, y - hh, cw, hh, stroke=0, fill=1)
-        text(M + i * cw + cw / 2, y - hh + 2.5 * mm * s, d, size=fs(8),
-             font="Helvetica-Bold", color=Q_PR if is_weekend else WHITE, align="c")
+        for i, day_idx in enumerate(day_idxs):
+            d = headers[day_idx]
+            is_weekend = day_idx in (sat_col, sun_col)
+            c.setFillColor(colors.HexColor("#eaf3ee") if is_weekend else Q_PR)
+            c.rect(x0 + i * cw, y - hh, cw, hh, stroke=0, fill=1)
+            text(x0 + i * cw + cw / 2, y - hh + 2.5 * mm * s, d, size=fs(8),
+                 font="Helvetica-Bold", color=Q_PR if is_weekend else WHITE, align="c")
 
-    # Corpo: 6 linhas (semanas) x 7 colunas
-    rh = (cal_h - hh) / 6
-    c.setStrokeColor(FAINT); c.setLineWidth(0.6)
+        rh = (cal_h - hh) / 6
+        c.setStrokeColor(FAINT); c.setLineWidth(0.6)
+        for r in range(1, 6):
+            c.line(x0, y - hh - r * rh, x0 + cal_w, y - hh - r * rh)
+        for i in range(1, len(day_idxs)):
+            c.line(x0 + i * cw, y - hh, x0 + i * cw, y - cal_h)
 
-    # linhas horizontais (entre as 6 semanas)
-    for r in range(1, 6):
-        c.line(M, y - hh - r * rh, M + cal_w, y - hh - r * rh)
+        by = y - cal_h - 6 * mm * s
+        bh2 = by - bottom
+        box(x0, by - bh2, usable_w, bh2, stroke=Q_PR, lw=1)
 
-    # linhas verticais (entre os 7 dias) — desenhar de cima (abaixo do header) até o fundo
-    for i in range(1, 7):
-        c.line(M + i * cw, y - hh, M + i * cw, y - cal_h)
-    by = y - cal_h - 6 * mm * s
-    bh2 = by - (M + 2 * mm * s)
-    half = (cal_w - 6 * mm * s) / 2
-    box(M, by - bh2, half, bh2, stroke=Q_PR, lw=1)
-    bar(M, by - 8 * mm * s, half, 8 * mm * s, Q_PR, "3 FOCOS + METAS DO MÊS")
-    for i in range(3):
-        yy = by - 15 * mm * s - i * 7 * mm * s
-        c.setStrokeColor(Q_PR); c.setLineWidth(1)
-        c.rect(M + 5 * mm * s, yy - 1 * mm * s, 3.2 * mm * s, 3.2 * mm * s, stroke=1, fill=0)
-        hline(M + 11 * mm * s, yy - 1 * mm * s, M + half - 5 * mm * s, color=LIGHT)
-    nm = int((bh2 - 40 * mm * s) // (7 * mm * s))
-    lines(M + 5 * mm * s, by - 40 * mm * s, half - 10 * mm * s, max(1, nm), gap=7 * mm * s, color=FAINT)
-    box(M + half + 6 * mm * s, by - bh2, half, bh2, stroke=Q_PR, lw=1)
-    bar(M + half + 6 * mm * s, by - 8 * mm * s, half, 8 * mm * s, Q_PR, "DATAS IMPORTANTES")
-    nd = int((bh2 - 12 * mm * s) // (7.5 * mm * s))
-    lines(M + half + 11 * mm * s, by - 14 * mm * s, half - 10 * mm * s, max(1, nd), gap=7.5 * mm * s, color=FAINT)
-    footer(8, color=Q_PR)
-    c.showPage()
+        if side == "left":
+            bar(x0, by - 8 * mm * s, usable_w, 8 * mm * s, Q_PR, "3 FOCOS + METAS DO MÊS")
+            for i in range(3):
+                yy = by - 15 * mm * s - i * 7 * mm * s
+                c.setStrokeColor(Q_PR); c.setLineWidth(1)
+                c.rect(x0 + 5 * mm * s, yy - 1 * mm * s, 3.2 * mm * s, 3.2 * mm * s, stroke=1, fill=0)
+                hline(x0 + 11 * mm * s, yy - 1 * mm * s, x0 + usable_w - 5 * mm * s, color=LIGHT)
+            nm = int((bh2 - 40 * mm * s) // (7 * mm * s))
+            lines(x0 + 5 * mm * s, by - 40 * mm * s, usable_w - 10 * mm * s, max(1, nm), gap=7 * mm * s, color=FAINT)
+        else:
+            bar(x0, by - 8 * mm * s, usable_w, 8 * mm * s, Q_PR, "DATAS IMPORTANTES")
+            nd = int((bh2 - 12 * mm * s) // (7.5 * mm * s))
+            lines(x0 + 5 * mm * s, by - 14 * mm * s, usable_w - 10 * mm * s, max(1, nd), gap=7.5 * mm * s, color=FAINT)
 
-    # ========================================================
-    # 9. SEMANAL A
-    # ========================================================
-    y = page_header("Semana de ____ / ____  a  ____ / ____", "Foque no que faz diferença", color=Q_RE)
-    bottom = M + 2 * mm * s
-    colw = (W - 2 * M - 6 * mm * s) / 2
-    total_h = y - bottom
-    pri_h = total_h * 0.26
-    box(M, y - pri_h, colw, pri_h, stroke=Q_RE, lw=1)
-    bar(M, y - 8 * mm * s, colw, 8 * mm * s, Q_RE, "TOP 3 PRIORIDADES DA SEMANA")
-    pg = (pri_h - 12 * mm * s) / 3
-    for i in range(3):
-        yy = y - 14 * mm * s - i * pg
-        c.setStrokeColor(Q_RE); c.setLineWidth(1)
-        c.rect(M + 5 * mm * s, yy - 2 * mm * s, 3.4 * mm * s, 3.4 * mm * s, stroke=1, fill=0)
-        hline(M + 11 * mm * s, yy - 2 * mm * s, M + colw - 5 * mm * s, color=LIGHT)
-    t_top = y - pri_h - 6 * mm * s
-    t_h = t_top - bottom
-    box(M, bottom, colw, t_h, stroke=Q_RE, lw=1)
-    bar(M, t_top - 8 * mm * s, colw, 8 * mm * s, Q_RE, "LISTA DE TAREFAS")
-    nt = max(1, int((t_h - 12 * mm * s) // (7.2 * mm * s)))
-    for i in range(nt):
-        yy = t_top - 14 * mm * s - i * 7.2 * mm * s
-        c.setStrokeColor(GREY); c.setLineWidth(0.8)
-        c.rect(M + 5 * mm * s, yy - 2 * mm * s, 3 * mm * s, 3 * mm * s, stroke=1, fill=0)
-        hline(M + 11 * mm * s, yy - 2 * mm * s, M + colw - 5 * mm * s, color=FAINT)
-    rx = M + colw + 6 * mm * s
-    hab_h = total_h * 0.60
-    box(rx, y - hab_h, colw, hab_h, stroke=Q_RE, lw=1)
-    bar(rx, y - 8 * mm * s, colw, 8 * mm * s, Q_RE, "CONTROLE DE ATIVIDADES / HÁBITOS")
-    gx = rx + 5 * mm * s; gy = y - 13 * mm * s
-    labcol = 30 * mm * s
-    dcw = (colw - 10 * mm * s - labcol) / 7
-    headers = weekday_headers(FIRST_WEEKDAY)
-    for i, d in enumerate(headers):
-        text(gx + labcol + dcw * i + dcw / 2, gy, d[0], size=fs(6.5), color=GREY, align="c")
-    nh = 8
-    hg = (hab_h - 18 * mm * s) / nh
-    for r in range(nh):
-        ry = gy - 7 * mm * s - r * hg
-        hline(gx, ry + hg * 0.62, rx + colw - 5 * mm * s, color=FAINT)
-        text(gx, ry, "____________", size=fs(8), color=GREY)
-        for i in range(7):
-            c.setStrokeColor(Q_RE); c.setLineWidth(0.7)
-            c.circle(gx + labcol + dcw * i + dcw / 2, ry + 1 * mm * s, 2.2 * s, stroke=1, fill=0)
-    n_top = y - hab_h - 6 * mm * s
-    n_h = n_top - bottom
-    box(rx, bottom, colw, n_h, stroke=Q_RE, lw=1)
-    bar(rx, n_top - 8 * mm * s, colw, 8 * mm * s, Q_RE, "NOTAS & IDEIAS")
-    nn = max(1, int((n_h - 12 * mm * s) // (7.2 * mm * s)))
-    lines(rx + 5 * mm * s, n_top - 14 * mm * s, colw - 10 * mm * s, nn, gap=7.2 * mm * s, color=FAINT)
-    footer(9, color=Q_RE)
-    c.showPage()
+        footer(pg, color=Q_PR)
+        c.showPage()
+
+    monthly_spread_page(8, "left", [0, 1, 2, 3])
+    monthly_spread_page(9, "right", [4, 5, 6])
 
     # ========================================================
-    # 10. SEMANAL B (grade de horários)
+    # 10 e 11. SEMANAL EM PÁGINA DUPLA
     # ========================================================
-    y = page_header("Grade de horários da semana", "Encaixe compromissos e blocos de foco", color=Q_RE)
-    grid_h = y - M - 2 * mm * s
-    tcol = 15 * mm * s
-    dayw = (W - 2 * M - tcol) / 7
-    hh = 8 * mm * s
-    c.setFillColor(Q_RE); c.rect(M, y - hh, W - 2 * M, hh, stroke=0, fill=1)
-    headers = weekday_headers(FIRST_WEEKDAY)
-    for i, d in enumerate(headers):
-        text(M + tcol + dayw * i + dayw / 2, y - hh + 2.5 * mm * s, d, size=fs(8),
-             font="Helvetica-Bold", color=WHITE, align="c")
-    hours = list(range(6, 23))
-    bt = y - hh
-    rh = (grid_h - hh) / len(hours)
-    c.setStrokeColor(FAINT); c.setLineWidth(0.6)
-    for r, hr in enumerate(hours):
-        yy = bt - r * rh
-        c.line(M, yy, W - M, yy)
-        text(M + 2.5 * mm * s, yy - rh / 2 - 1, f"{hr:02d}h", size=fs(7), color=GREY)
-    c.line(M, bt - len(hours) * rh, W - M, bt - len(hours) * rh)
-    c.setStrokeColor(LIGHT); c.setLineWidth(0.8)
-    for i in range(8):
-        xx = M + tcol + i * dayw
-        c.line(xx, y - hh, xx, bt - len(hours) * rh)
-    c.line(M, y - hh, M, bt - len(hours) * rh)
-    footer(10, color=Q_RE)
-    c.showPage()
+    def weekly_spread_page(pg, side, day_idxs):
+        title = "Semana de ____ / ____  a  ____ / ____" if side == "left" else None
+        subtitle = "Página dupla para booklet: planejamento + grade horária" if side == "left" else None
+        y, m_left, m_right = booklet_page_header(
+            title,
+            subtitle,
+            color=Q_RE,
+            side=side,
+        )
+        x0 = m_left
+        usable_w = W - m_left - m_right
+        bottom = M + 2 * mm * s
+
+        top_h = (y - bottom) * 0.27
+        gap = 4 * mm * s
+        time_h = (y - bottom) * 0.48
+        lower_top = y - top_h - gap - time_h - gap
+        lower_h = lower_top - bottom
+
+        if side == "left":
+            left_w = usable_w * 0.52
+            right_w = usable_w - left_w - 4 * mm * s
+
+            box(x0, y - top_h, left_w, top_h, stroke=Q_RE, lw=1)
+            bar(x0, y - 7 * mm * s, left_w, 7 * mm * s, Q_RE, "TOP 3 PRIORIDADES", size=8)
+            row_h = (top_h - 11 * mm * s) / 3
+            for i in range(3):
+                yy = y - 12.5 * mm * s - i * row_h
+                c.setStrokeColor(Q_RE); c.setLineWidth(0.9)
+                c.rect(x0 + 4 * mm * s, yy - 1.8 * mm * s, 3 * mm * s, 3 * mm * s, stroke=1, fill=0)
+                hline(x0 + 9.5 * mm * s, yy - 1.6 * mm * s, x0 + left_w - 4 * mm * s, color=LIGHT)
+
+            rx = x0 + left_w + 4 * mm * s
+            box(rx, y - top_h, right_w, top_h, stroke=Q_RE, lw=1)
+            bar(rx, y - 7 * mm * s, right_w, 7 * mm * s, Q_RE, "HÁBITOS", size=8)
+            headers = weekday_headers(FIRST_WEEKDAY)
+            habit_labels = ["Água", "Exercício", "Leitura", "Sono", "Foco", "Estudo"]
+            labcol = 16 * mm * s
+            dcw = (right_w - 8 * mm * s - labcol) / len(day_idxs)
+            gx = rx + 4 * mm * s
+            gy = y - 11.5 * mm * s
+            for i, day_idx in enumerate(day_idxs):
+                text(gx + labcol + dcw * i + dcw / 2, gy, headers[day_idx][0], size=fs(5.8), color=GREY, align="c")
+            hg = (top_h - 15 * mm * s) / len(habit_labels)
+            for r, lbl in enumerate(habit_labels):
+                ry = gy - 5.5 * mm * s - r * hg
+                text(gx, ry, lbl, size=fs(6.4), color=GREY)
+                hline(gx, ry - 1.3 * mm * s, rx + right_w - 4 * mm * s, color=FAINT)
+                for i in range(len(day_idxs)):
+                    c.setStrokeColor(Q_RE); c.setLineWidth(0.6)
+                    c.circle(gx + labcol + dcw * i + dcw / 2, ry, 1.8 * s, stroke=1, fill=0)
+
+            box(x0, lower_top - lower_h, usable_w, lower_h, stroke=Q_RE, lw=1)
+            bar(x0, lower_top - 7 * mm * s, usable_w, 7 * mm * s, Q_RE, "LISTA DE TAREFAS", size=8)
+            nt = max(1, int((lower_h - 12 * mm * s) // (6.2 * mm * s)))
+            for i in range(nt):
+                yy = lower_top - 12.5 * mm * s - i * 6.2 * mm * s
+                c.setStrokeColor(GREY); c.setLineWidth(0.75)
+                c.rect(x0 + 4 * mm * s, yy - 1.8 * mm * s, 2.8 * mm * s, 2.8 * mm * s, stroke=1, fill=0)
+                hline(x0 + 9 * mm * s, yy - 1.6 * mm * s, x0 + usable_w - 4 * mm * s, color=FAINT)
+        else:
+            top_w = usable_w
+            box(x0, y - top_h, top_w, top_h, stroke=Q_RE, lw=1)
+            bar(x0, y - 7 * mm * s, top_w, 7 * mm * s, Q_RE, "NOTAS & IDEIAS", size=8)
+            nn = max(1, int((top_h - 12 * mm * s) // (6.2 * mm * s)))
+            lines(x0 + 4 * mm * s, y - 12.5 * mm * s, top_w - 8 * mm * s, nn, gap=6.2 * mm * s, color=FAINT)
+
+        grid_top = y - top_h - gap
+        grid_w = usable_w
+        grid_h = time_h
+        tcol = 12 * mm * s if side == "right" else 14 * mm * s
+        dayw = (grid_w - tcol) / len(day_idxs)
+        hh = 7 * mm * s
+
+        c.setFillColor(Q_RE); c.rect(x0, grid_top - hh, grid_w, hh, stroke=0, fill=1)
+        headers = weekday_headers(FIRST_WEEKDAY)
+        for i, day_idx in enumerate(day_idxs):
+            d = headers[day_idx]
+            text(x0 + tcol + dayw * i + dayw / 2, grid_top - hh + 2.2 * mm * s, d, size=fs(7.2),
+                 font="Helvetica-Bold", color=WHITE, align="c")
+
+        hours = list(range(6, 24))
+        bt = grid_top - hh
+        rh = (grid_h - hh) / len(hours)
+        c.setStrokeColor(FAINT); c.setLineWidth(0.55)
+        for r, hr in enumerate(hours):
+            yy = bt - r * rh
+            c.line(x0, yy, x0 + grid_w, yy)
+            text(x0 + 2.0 * mm * s, yy - rh / 2 - 1, f"{hr:02d}", size=fs(6.1), color=GREY)
+        c.line(x0, bt - len(hours) * rh, x0 + grid_w, bt - len(hours) * rh)
+
+        c.setStrokeColor(LIGHT); c.setLineWidth(0.75)
+        for i in range(len(day_idxs) + 1):
+            xx = x0 + tcol + i * dayw
+            c.line(xx, grid_top - hh, xx, bt - len(hours) * rh)
+        c.line(x0, grid_top - hh, x0, bt - len(hours) * rh)
+
+        if side == "left":
+            c.setStrokeColor(LIGHT); c.setLineWidth(1.0)
+            c.line(W - m_right + 1.5 * mm * s, grid_top - hh, W - m_right + 1.5 * mm * s, bt - len(hours) * rh)
+        else:
+            c.setStrokeColor(LIGHT); c.setLineWidth(1.0)
+            c.line(m_left - 1.5 * mm * s, grid_top - hh, m_left - 1.5 * mm * s, bt - len(hours) * rh)
+
+        footer(pg, color=Q_RE)
+        c.showPage()
+
+    weekly_spread_page(10, "left", [0, 1, 2, 3])
+    weekly_spread_page(11, "right", [4, 5, 6])
 
     # ========================================================
-    # 11. CONTROLE FINANCEIRO
+    # 12. CONTROLE FINANCEIRO
     # ========================================================
     page_header("", None, color=Q_PR)
     top = H - M - 2 * mm * s
@@ -782,11 +841,11 @@ def build(page_size, out_name, include_rio=True, include_school=True):
             text(fx + fw + 4 * mm * s, sy + 2.4 * mm * s, op, size=fs(13),
                  font="Helvetica-Bold", color=GREY, align="c")
         fx += fw + 8 * mm * s
-    footer(11, color=Q_PR)
+    footer(12, color=Q_PR)
     c.showPage()
 
     # ========================================================
-    # 12. REFLEXÃO MENSAL
+    # 13. REFLEXÃO MENSAL
     # ========================================================
     y = page_header("Reflexão mensal", "Feche o mês com clareza", color=Q_PE)
     qs = ["O que funcionou bem este mês?", "O que travou ou consumiu energia à toa?",
@@ -805,50 +864,92 @@ def build(page_size, out_name, include_rio=True, include_school=True):
         c.setStrokeColor(Q_PE); c.setLineWidth(0.9)
         c.circle(M + 8 * mm * s + i * step, yy - 9 * mm * s, 4 * s, stroke=1, fill=0)
         text(M + 8 * mm * s + i * step, yy - 10.3 * mm * s, str(i), size=fs(7), color=GREY, align="c")
-    footer(12, color=Q_PE)
+    footer(13, color=Q_PE)
     c.showPage()
 
     # ========================================================
-    # 13. PÁGINA PAUTADA
+    # 14. PÁGINA PAUTADA
     # ========================================================
     y = page_header("Anotações", "Página pautada", color=Q_QV)
     nl = int((y - M) // (8 * mm * s))
     lines(M, y, W - 2 * M, nl, gap=8 * mm * s, color=LIGHT)
-    footer(13)
-    c.showPage()
-
-    # ========================================================
-    # 14. PÁGINA PONTILHADA
-    # ========================================================
-    y = page_header("Anotações", "Página pontilhada", color=Q_QV)
-    dots(M, M, W - 2 * M, y - M, step=6 * mm * s)
     footer(14)
     c.showPage()
 
+    # ========================================================
+    # 15. PÁGINA PONTILHADA
+    # ========================================================
+    y = page_header("Anotações", "Página pontilhada", color=Q_QV)
+    dots(M, M, W - 2 * M, y - M, step=6 * mm * s)
+    footer(15)
+    c.showPage()
+
     c.save()
-    print(f"PDF gerado: {out_name} (14 páginas).")
+    print(f"PDF gerado: {out_name} (15 páginas).")
 
 
 SIZES = {"A4": A4, "A5": A5}
 
 
+def build_yearly_booklet(page_size, out_name, year, include_rio=True, include_school=True):
+    build(page_size, out_name, include_rio=include_rio, include_school=include_school)
+
+
+def build_monthly_booklet(page_size, out_name, year, month, include_rio=True, include_school=True):
+    build(page_size, out_name, include_rio=include_rio, include_school=include_school)
+
+
+def build_weekly_booklet(page_size, out_name, include_rio=True, include_school=True):
+    build(page_size, out_name, include_rio=include_rio, include_school=include_school)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Planner colorido 2026/2027 (A4/A5).")
     ap.add_argument("--size", choices=["A4", "A5", "both"], default="both")
+    ap.add_argument("--mode", choices=["yearly", "monthly", "weekly", "all"], default="all",
+                    help="qual booklet gerar")
+    ap.add_argument("--year", type=int, choices=[2026, 2027], default=2026,
+                    help="ano de referência para yearly/monthly")
+    ap.add_argument("--month", type=int, choices=list(range(1, 13)),
+                    help="mês de referência para o booklet monthly")
     ap.add_argument("--rio", dest="rio", action="store_true", help="incluir feriados do Rio (padrão)")
     ap.add_argument("--no-rio", dest="rio", action="store_false", help="não incluir feriados do Rio")
     ap.add_argument("--escolar", dest="escolar", action="store_true", help="incluir recessos escolares (padrão)")
     ap.add_argument("--no-escolar", dest="escolar", action="store_false", help="não incluir recessos escolares")
     ap.set_defaults(rio=INCLUDE_RIO, escolar=INCLUDE_SCHOOL)
     args = ap.parse_args()
+
+    if args.mode == "monthly" and args.month is None:
+        ap.error("--month é obrigatório quando --mode monthly")
+
     for sz in (["A4", "A5"] if args.size == "both" else [args.size]):
-        build(SIZES[sz], f"planner_colorido_2026_2027_{sz}.pdf",
-              include_rio=args.rio, include_school=args.escolar)
+        if args.mode in ("yearly", "all"):
+            build_yearly_booklet(
+                SIZES[sz],
+                f"planner_yearly_{args.year}_{sz}.pdf",
+                year=args.year,
+                include_rio=args.rio,
+                include_school=args.escolar,
+            )
+        if args.mode in ("monthly", "all"):
+            months = [args.month] if args.month else list(range(1, 13))
+            for month in months:
+                build_monthly_booklet(
+                    SIZES[sz],
+                    f"planner_monthly_{args.year}_{month:02d}_{sz}.pdf",
+                    year=args.year,
+                    month=month,
+                    include_rio=args.rio,
+                    include_school=args.escolar,
+                )
+        if args.mode in ("weekly", "all"):
+            build_weekly_booklet(
+                SIZES[sz],
+                f"planner_weekly_{sz}.pdf",
+                include_rio=args.rio,
+                include_school=args.escolar,
+            )
 
-
-# Ligue/desligue por padrão aqui (ou use --no-rio / --no-escolar):
-INCLUDE_RIO = True
-INCLUDE_SCHOOL = True
 
 if __name__ == "__main__":
     main()
