@@ -21,22 +21,38 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
-# ---------------- paleta (colorida) ----------------
-INK = colors.HexColor("#222222")
-GREY = colors.HexColor("#8a8a8a")
-LIGHT = colors.HexColor("#d9d9d9")
-FAINT = colors.HexColor("#eef1f5")
+# ---------------- paleta inspirada em Kandinsky ----------------
+INK = colors.HexColor("#111111")
+BLACK = colors.HexColor("#000000")
+GREY = colors.HexColor("#6b6b6b")
+LIGHT = colors.HexColor("#c9ced6")
+FAINT = colors.HexColor("#e8ecf1")
+PAPER = colors.HexColor("#f7f1e3")
 WHITE = colors.white
 
-Q_QV = colors.HexColor("#2f5b8f")   # Qualidade de Vida  - azul
-Q_PE = colors.HexColor("#7a3b8f")   # Pessoal            - roxo
-Q_PR = colors.HexColor("#3f8f5f")   # Profissional       - verde
-Q_RE = colors.HexColor("#c1651d")   # Relacionamentos    - laranja
-ACC = Q_QV
-ACC2 = colors.HexColor("#e8483f")   # feriado nacional (vermelho)
-FAC = colors.HexColor("#f0a500")    # ponto facultativo (âmbar)
-REG = colors.HexColor("#1f9e89")    # feriado regional Rio/RJ (verde-azulado)
-SCHOOL_BG = colors.HexColor("#ffe9a8")  # fundo dos dias de recesso escolar
+K_YELLOW = colors.HexColor("#f2c300")
+K_BLUE = colors.HexColor("#0057a3")
+K_RED = colors.HexColor("#d7261e")
+K_GREEN = colors.HexColor("#2e8b57")
+K_ORANGE = colors.HexColor("#e67e22")
+K_PURPLE = colors.HexColor("#6a3d9a")
+K_TEAL = colors.HexColor("#1f7a8c")
+DOTS = colors.HexColor("#8f98a6")
+
+FINANCE_FILL = colors.HexColor("#eef5ff")
+FINANCE_ROW_FILL = colors.HexColor("#f8fbff")
+FINANCE_HEADER = colors.HexColor("#a7c7e7")
+FINANCE_TOTAL = colors.HexColor("#d6e6f5")
+
+Q_QV = K_BLUE
+Q_PE = K_PURPLE
+Q_PR = K_GREEN
+Q_RE = K_ORANGE
+ACC = K_BLUE
+ACC2 = K_RED
+FAC = K_YELLOW
+REG = K_TEAL
+SCHOOL_BG = colors.HexColor("#f6e27a")
 
 PT_MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
@@ -157,12 +173,12 @@ SME_RANGES = {
 
 # Cores por tipo de evento SME (usadas nos marcadores e na legenda)
 SME_COLORS = {
-    "PLAN":    colors.HexColor("#1f9e89"),   # verde-azulado
-    "LETIVO":  colors.HexColor("#2f5b8f"),   # azul
-    "RECESSO": colors.HexColor("#ffe9a8"),   # amarelo (fundo)
-    "REUNIAO": colors.HexColor("#7a3b8f"),   # roxo
-    "AVAL":    colors.HexColor("#c1651d"),   # laranja
-    "COMEMOR": colors.HexColor("#3f8f5f"),   # verde
+    "PLAN":    K_TEAL,
+    "LETIVO":  K_BLUE,
+    "RECESSO": SCHOOL_BG,
+    "REUNIAO": K_PURPLE,
+    "AVAL":    K_ORANGE,
+    "COMEMOR": K_GREEN,
 }
 SME_LABELS = {
     "PLAN": "Planejamento/Formação", "LETIVO": "Marco letivo (início/término)",
@@ -240,7 +256,7 @@ def build(page_size, out_name, include_rio=True, include_school=True):
         {"l": c.drawString, "c": c.drawCentredString, "r": c.drawRightString}[align](0, 0, ss)
         c.restoreState()
 
-    def box(x, y, w, h, r=2.0 * mm, stroke=LIGHT, fill=None, lw=0.8):
+    def box(x, y, w, h, r=2.0 * mm, stroke=LIGHT, fill=None, lw=1.0):
         c.setLineWidth(lw); c.setStrokeColor(stroke)
         if fill:
             c.setFillColor(fill)
@@ -253,7 +269,7 @@ def build(page_size, out_name, include_rio=True, include_school=True):
             text(tx, y + h / 2 - fs(size) * 0.35, txt, size=fs(size),
                  font="Helvetica-Bold", color=tcolor, align=align)
 
-    def hline(x1, y, x2, color=FAINT, lw=0.6):
+    def hline(x1, y, x2, color=FAINT, lw=0.8):
         c.setStrokeColor(color); c.setLineWidth(lw); c.line(x1, y, x2, y)
 
     def label(x, y, ss, size=8.5, color=ACC):
@@ -264,10 +280,10 @@ def build(page_size, out_name, include_rio=True, include_school=True):
             hline(x, y_top - i * gap, x + w, color=color)
 
     def dots(x0, y0, w, h, step):
-        c.setFillColor(LIGHT)
+        c.setFillColor(DOTS)
         for j in range(int(h // step) + 1):
             for i in range(int(w // step) + 1):
-                c.circle(x0 + i * step, y0 + j * step, 0.35 * s, stroke=0, fill=1)
+                c.circle(x0 + i * step, y0 + j * step, 0.5 * s, stroke=0, fill=1)
 
     def page_header(title, subtitle=None, color=ACC):
         c.setFillColor(color); c.rect(0, H - 4 * mm * s, W, 4 * mm * s, stroke=0, fill=1)
@@ -512,24 +528,24 @@ def build(page_size, out_name, include_rio=True, include_school=True):
         c.line(cx, cy, cx + R * math.cos(bnd), cy + R * math.sin(bnd))
         for k in range(1, 11):
             rr = R * (k - 0.5) / 10
-            text(cx + rr * math.cos(center), cy + rr * math.sin(center) - fs(4) * 0.35,
-                 str(k), size=fs(4.4), color=col, align="c")
-        r0 = R + 2 * mm * s
+            text(cx + rr * math.cos(center), cy + rr * math.sin(center) - fs(6) * 0.35,
+                 str(k), size=fs(6.6), color=col, align="c")
+        r0 = R + 5 * mm * s
         if math.cos(center) >= 0:
             rot, al, xa = deg, "l", r0
         else:
             rot, al, xa = deg + 180, "r", -r0
         rtext(cx + r0 * math.cos(center), cy + r0 * math.sin(center), rot, name,
-              size=fs(5.6), font="Helvetica-Bold", color=col, align=al)
+              size=fs(8.6), font="Helvetica-Bold", color=col, align=al)
     c.setFillColor(WHITE); c.circle(cx, cy, R * 0.05, stroke=0, fill=1)
     quad = [("Pessoal", 45, Q_PE), ("Profissional", -45, Q_PR),
             ("Relacionamentos", 225, Q_RE), ("Qualidade de vida", 135, Q_QV)]
     for name, deg, col in quad:
         a = math.radians(deg)
-        rr = R + 26 * mm * s
+        rr = R + 32 * mm * s
         rot = deg if math.cos(a) >= 0 else deg + 180
         rtext(cx + rr * math.cos(a), cy + rr * math.sin(a), rot, name.upper(),
-              size=fs(8.5), font="Helvetica-Bold", color=col, align="c")
+              size=fs(13), font="Helvetica-Bold", color=col, align="c")
     text(M, M + 10 * mm * s,
          "2. Ligue os pontos para enxergar o equilíbrio. Onde a nota é baixa, escreva 1 ação de melhoria:",
          size=fs(8.5), color=colors.HexColor("#444444"))
@@ -701,29 +717,33 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     # ========================================================
     page_header("", None, color=Q_PR)
     top = H - M - 2 * mm * s
-    bar(M, top - 8 * mm * s, W - 2 * M, 8 * mm * s, colors.HexColor("#2b2b2b"),
-        "CONTROLE FINANCEIRO — MÊS: ____________")
+    bar(M, top - 8 * mm * s, W - 2 * M, 8 * mm * s, FINANCE_HEADER,
+        "CONTROLE FINANCEIRO — MÊS: ____________", tcolor=INK)
     cur = top - 8 * mm * s
 
     def money_grid(x, w, cols_spec, nrows, rowh, header_color, header_txt):
         bh_ = 6.5 * mm * s
         bar(x, cur - bh_, w, bh_, header_color, header_txt)
         ch = 5 * mm * s
-        c.setFillColor(FAINT); c.rect(x, cur - bh_ - ch, w, ch, stroke=0, fill=1)
+        c.setFillColor(FINANCE_FILL); c.rect(x, cur - bh_ - ch, w, ch, stroke=0, fill=1)
         xx = x
         for cname, cw_ in cols_spec:
             text(xx + 2 * mm * s, cur - bh_ - ch + 1.4 * mm * s, cname,
                  size=fs(6.5), font="Helvetica-Bold", color=GREY)
             xx += cw_
         gy0 = cur - bh_ - ch
-        c.setStrokeColor(FAINT); c.setLineWidth(0.5)
+        for r in range(nrows):
+            if r % 2 == 0:
+                c.setFillColor(FINANCE_ROW_FILL)
+                c.rect(x, gy0 - (r + 1) * rowh, w, rowh, stroke=0, fill=1)
+        c.setStrokeColor(FAINT); c.setLineWidth(0.7)
         for r in range(nrows + 1):
             c.line(x, gy0 - r * rowh, x + w, gy0 - r * rowh)
-        xx = x; c.setStrokeColor(LIGHT)
+        xx = x; c.setStrokeColor(LIGHT); c.setLineWidth(0.8)
         for cname, cw_ in cols_spec[:-1]:
             xx += cw_
             c.line(xx, gy0 - nrows * rowh, xx, gy0)
-        box(x, gy0 - nrows * rowh, w, bh_ + ch + nrows * rowh, r=1.2 * mm, stroke=LIGHT)
+        box(x, gy0 - nrows * rowh, w, bh_ + ch + nrows * rowh, r=1.2 * mm, stroke=LIGHT, lw=1.1)
         return gy0 - nrows * rowh
 
     gcol = 6 * mm * s
@@ -735,10 +755,10 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     money_grid(M + cw2 + gcol, cw2, ent_cols, nrows_top, rowh, Q_PE, "PARCELAMENTOS / RECORRENTES")
     for xb in [M, M + cw2 + gcol]:
         ty = b1 - 6 * mm * s
-        bar(xb, ty, cw2, 6 * mm * s, colors.HexColor("#4a4a4a"), "")
+        bar(xb, ty, cw2, 6 * mm * s, FINANCE_TOTAL, "")
         text(xb + cw2 * 0.55, ty + 1.7 * mm * s, "TOTAL", size=fs(7),
-             font="Helvetica-Bold", color=WHITE, align="r")
-        box(xb + cw2 * 0.80, ty + 1 * mm * s, cw2 * 0.18, 4 * mm * s, r=0.6 * mm, stroke=WHITE, lw=0.8)
+             font="Helvetica-Bold", color=INK, align="r")
+        box(xb + cw2 * 0.80, ty + 1 * mm * s, cw2 * 0.18, 4 * mm * s, r=0.6 * mm, stroke=INK, lw=0.8)
     cur = b1 - 6 * mm * s - 5 * mm * s
     sai_cols = [("DATA", (W - 2 * M) * 0.13), ("DESCRIÇÃO", (W - 2 * M) * 0.72), ("VALOR", (W - 2 * M) * 0.15)]
     saldo_h = 16 * mm * s
@@ -746,13 +766,13 @@ def build(page_size, out_name, include_rio=True, include_school=True):
     nrows_sai = max(6, int(avail // rowh))
     bS = money_grid(M, W - 2 * M, sai_cols, nrows_sai, rowh, Q_RE, "SAÍDAS")
     tyS = bS - 6 * mm * s
-    bar(M, tyS, W - 2 * M, 6 * mm * s, colors.HexColor("#4a4a4a"), "")
+    bar(M, tyS, W - 2 * M, 6 * mm * s, FINANCE_TOTAL, "")
     text(M + (W - 2 * M) * 0.85, tyS + 1.7 * mm * s, "TOTAL", size=fs(7),
-         font="Helvetica-Bold", color=WHITE, align="r")
-    box(M + (W - 2 * M) * 0.86, tyS + 1 * mm * s, (W - 2 * M) * 0.13, 4 * mm * s, r=0.6 * mm, stroke=WHITE, lw=0.8)
+         font="Helvetica-Bold", color=INK, align="r")
+    box(M + (W - 2 * M) * 0.86, tyS + 1 * mm * s, (W - 2 * M) * 0.13, 4 * mm * s, r=0.6 * mm, stroke=INK, lw=0.8)
     sy = M + 2 * mm * s
     fields = [("ENTRADAS", Q_PR, "−"), ("PARC./RECOR.", Q_PE, "−"),
-              ("SAÍDAS", Q_RE, "="), ("SALDO FINAL", colors.HexColor("#2b2b2b"), "")]
+              ("SAÍDAS", Q_RE, "="), ("SALDO FINAL", FINANCE_HEADER, "")]
     fw = (W - 2 * M - 3 * 8 * mm * s) / 4
     fx = M
     for name, col, op in fields:
